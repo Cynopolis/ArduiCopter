@@ -1,0 +1,4 @@
+-Impliment PID Loop to keep quad copter balanced - Might be done??
+-Impliment kalman filter to compensate for the acceleration the quad experiences when it moves.
+-Impliment input from the RC reciever
+-Impliment output to motors
