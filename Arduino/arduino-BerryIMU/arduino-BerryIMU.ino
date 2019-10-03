@@ -39,6 +39,7 @@ void setup() {
   }
   detectIMU();
   enableIMU();
+  //read the data from the IMU
   readIMU();
 }
 
@@ -62,6 +63,7 @@ void loop() {
   Serial.println(angles[2]);
 }
 
+//read the data from the IMU
 void readIMU(){ 
   byte buff[6];
   unsigned int startTime = millis();
@@ -115,4 +117,14 @@ void updatePID(){
   for(int i = 0; i < 3; i++){
     axis[i].run();
   }
+}
+
+//calculate the polar angles for the accelerometer
+float[] calcLevelAngle(){
+  float angles[3];
+  float magnitude = sqrt(sq(IMUData[0][0]) + sq(IMUData[0][1]) + sq(IMUData[0][2]));
+  for(int i = 0; i < 3; i++){
+    angles[i] = acos(IMUData[0][i]/magnitude);
+  }
+  return angles;
 }
