@@ -1,4 +1,11 @@
--Impliment PID Loop to keep quad copter balanced - Might be done??
--Impliment kalman filter to compensate for the acceleration the quad experiences when it moves.
+-Impliment PID Loops for pitch, roll, and yaw. - Might be done??
+-Translate PID outputs to ESC inputs
+-Add kalman filters to the PID loop. Xangle + GyroX, Yangle + GyroY, heading+GyroZ
 -Impliment input from the RC reciever
--Impliment output to motors
+
+At this point the Quad Copter should be fliable, and the rest is gravy
+
+-Tune PID loops
+-Impliment an altitude PID loop.
+-Add kalman filter to altitude PID loop
+-Tune altitude PID loop
