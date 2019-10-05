@@ -13,10 +13,10 @@
  * Unless stated otherwise ALL data is stored in the order of x, y, z
  */
 float IMUData[3][3];
-//Esc output data
-Servo esc[4];
-//pin numbers of the ESC pins in the order of FL, FR, RL, RR
-int escPin[4] = {2,6,7,8};
+//ESC output data
+Servo ESC[4];
+//pin numbers of the ESC pins in the order of FL, FR, BL, BR
+int ESCPin[4] = {2,6,7,8};
 //compass heading
 float heading = 0;
 
@@ -26,16 +26,16 @@ float targetAngles[3] = {90, 90, 0};
 
 //PID controllers, their k values, and their outputs
 float kVals[3][3] = {{1,1,1}, {1,1,1}, {1,1,1}};
-float outputPIDVal[3] = {0, 0, 0};
-AutoPID pid1(&angles[0], &targetAngles[0], &outputPIDVal[0], 0, 180, kVals[0][0], kVals[0][1], kVals[0][2]);
-AutoPID pid2(&angles[1], &targetAngles[1], &outputPIDVal[1], 0, 180, kVals[1][0], kVals[1][1], kVals[1][2]);
-AutoPID pid3(&angles[2], &targetAngles[2], &outputPIDVal[2], 0, 180, kVals[2][0], kVals[2][1], kVals[2][2]);
-AutoPID axis[3] = {pid1, pid2, pid3};
+float PIDOutput[3] = {0, 0, 0};
+AutoPID pitch(&angles[0], &targetAngles[0], &PIDOutput[0], 0, 100, kVals[0][0], kVals[0][1], kVals[0][2]);
+AutoPID roll(&angles[1], &targetAngles[1], &PIDOutput[1], 0, 100, kVals[1][0], kVals[1][1], kVals[1][2]);
+AutoPID yaw(&IMUData[1][2], &targetAngles[2], &PIDOutput[2], 0, 100, kVals[2][0], kVals[2][1], kVals[2][2]);
+float height = 0;
 
 void setup() {
   Serial.begin(9600);
   for(int i = 0; i < 4; i++){
-    esc[i].attach(escPin[i]);
+    ESC[i].attach(ESCPin[i]);
   }
   detectIMU();
   enableIMU();
@@ -50,15 +50,15 @@ void loop() {
   //Serial.print("Test: ");
   //Serial.print(IMUData[0][0]);
   Serial.print("X: ");
-  Serial.print(outputPIDVal[0]);
+  Serial.print(PIDOutput[0]);
   Serial.print(", ");
   Serial.print(angles[0]);
   Serial.print(", Y: ");
-  Serial.print(outputPIDVal[1]);
+  Serial.print(PIDOutput[1]);
   Serial.print(", ");
   Serial.print(angles[1]);
   Serial.print(", Z: ");
-  Serial.print(outputPIDVal[2]);
+  Serial.print(PIDOutput[2]);
   Serial.print(", ");
   Serial.println(angles[2]);
 }
@@ -114,17 +114,25 @@ void calcLevelAngle(){
 }
 
 void updatePID(){
-  for(int i = 0; i < 3; i++){
-    axis[i].run();
-  }
+  pitch.run();
+  roll.run();
+  yaw.run();
 }
 
-//calculate the polar angles for the accelerometer
-float[] calcLevelAngle(){
-  float angles[3];
-  float magnitude = sqrt(sq(IMUData[0][0]) + sq(IMUData[0][1]) + sq(IMUData[0][2]));
-  for(int i = 0; i < 3; i++){
-    angles[i] = acos(IMUData[0][i]/magnitude);
-  }
-  return angles;
+//Assigns new values to the ESCs based on the PID output
+void updateESCs(){
+  float e = 2.71828;
+  float FL = height - PIDOutput[0] + PIDOutput[1] + PIDOutput[2];
+  float FR = height - PIDOutput[0] - PIDOutput[1] - PIDOutput[2];
+  float BL = height + PIDOutput[0] + PIDOutput[1] - PIDOutput[2];
+  float BR = height + PIDOutput[0] - PIDOutput[1] + PIDOutput[2];
+
+  /*apply the logistic growth formula of (1/(1+e^(-x)))
+   * to normalize the output to something between 0 and 180
+   */
+  ESC[0].write(180/(1 + pow(e, -0.05*(FL-100))) + 90);
+  //FR's output range is different so it gets a different formula
+  ESC[1].write(180/(1 + pow(e, -0.05*(FL+100))) + 90);
+  ESC[2].write(180/(1 + pow(e, -0.05*(FL-100))) + 90);
+  ESC[3].write(180/(1 + pow(e, -0.05*(FL-100))) + 90);
 }
