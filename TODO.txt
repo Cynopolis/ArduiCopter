@@ -15,8 +15,8 @@
 At this point the Quad Copter should be flyable, and the rest is gravy
 
 Now I want a way for the quad to easily hold its altitude
+-Add communications for the barometer and temperature sensor on the Berry IMU V2
 -Impliment an altitude PID loop.
--Add kalman filter to altitude PID loop
 -Tune altitude PID loop
 
 Now I want the arduino to be able to do GPS tracking
@@ -25,6 +25,6 @@ Now I want the arduino to be able to do GPS tracking
 -Add GPS data to kalman filter?
 
 Now I want telemetry to be sent between the arduino and a computer
--Impliment radio communication over a frequency that's not 5.8 or 2.5 GHz
+-Impliment radio communication over a frequency that's not 5.8 or 2.4 GHz
 -Make the communication method reliable (call and response)
 -Allow the arduino to take commands over telemetry
