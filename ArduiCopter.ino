@@ -2,7 +2,6 @@
 #include "IMU.h"
 #include "Servo.h"
 
-#define DT  0.02          // Loop time
 #define G_GAIN 0.070    // [deg/s/LSB]
 
 /*This stores the data recieved from the accelerometer,
@@ -12,7 +11,6 @@
  * Compass data is in IMUData[2] (raw compass data)
  * Unless stated otherwise ALL data is stored in the order of x, y, z
  */
-boolean failSafe = false;
 float IMUData[3][3];
 //the filtered angles that combines the accel and gyro input (degrees)
 float filteredData[3] = {0, 0, 0};
@@ -25,6 +23,8 @@ int ESCPin[4] = {2,6,7,8};
  */
 int RXPin[6] = {A0, A1, A2, A3, A4, A5};
 float RXData[6] = {0,0,0,0,0,0};
+//true if the quadcopter has lost connection to the radio transmitter
+boolean failSafe = false;
 //compass heading
 float heading = 0;
 
@@ -46,6 +46,7 @@ void setup() {
   for(int i = 0; i < 4; i++){
     ESC[i].attach(ESCPin[i]);
   }
+  //IMU startup
   detectIMU();
   enableIMU();
   //read the data from the IMU
@@ -66,13 +67,16 @@ void loop() {
   updatePID();
   //output new values to the ESC
   updateESCs();
+  //Each loop should be at least 20ms.
+  while(millis() - timer < (20)){
+    delay(1);
+  }
   Serial.println(millis()-timer);
 }
 
 //read the data from the IMU
 void readIMU(){ 
   byte buff[6];
-  unsigned int startTime = millis();
 
   //Read accelerometer data
   readACC(buff);
@@ -101,14 +105,11 @@ void readIMU(){
   //Compute heading  
    heading = 180 * atan2(IMUData[2][1],IMUData[2][0])/M_PI;
   
-  //Convert heading to 0 - 360
-  while(IMUData[2][0] < 0)
-    IMUData[2][0] += 360;
-  
-  //Each loop should be at least 20ms.
-  while(millis() - startTime < (DT*1000)){
-    delay(1);
-  }
+  //keep heading between 0 - 360
+  while(heading < 0)
+    heading += 360;
+  while(heading > 360)
+    heading -= 360;
 }
 
 //calculate the tilt angles in degrees from the accelerometer data
@@ -129,12 +130,13 @@ void updatePID(){
 //Assigns new values to the ESCs based on the PID output
 void updateESCs(){
   float e = 2.71828;
+  //These equations describe the unique behavior of each motor
   float FL = height - PIDOutput[0] + PIDOutput[1] + PIDOutput[2];
   float FR = height - PIDOutput[0] - PIDOutput[1] - PIDOutput[2];
   float BL = height + PIDOutput[0] + PIDOutput[1] - PIDOutput[2];
   float BR = height + PIDOutput[0] - PIDOutput[1] + PIDOutput[2];
 
-  /*apply the logistic growth formula of (1/(1+e^(-x)))
+  /*apply the logistic growth formula (1/(1+e^(-x)))
    * to normalize the output to something between 0 and 180
    */
   ESC[0].write(180/(1 + pow(e, -0.05*(FL-100))) + 90);
