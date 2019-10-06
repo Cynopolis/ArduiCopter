@@ -1,7 +1,12 @@
--Impliment PID Loops for pitch, roll, and yaw. - Needs testing??
+-Impliment PID Loops for pitch, roll, and yaw. - Needs testing
 -Translate PID outputs to ESC inputs - Needs testing
--Add kalman filters to the PID loop. Xangle + GyroX, Yangle + GyroY, heading + GyroZ
+-Add kalman filters to the PID loop. Xangle + GyroX, Yangle + GyroY, heading + GyroZ - Implimented complimentary filter instead
+	A note about the kalman filter:
+	After some research I found that i'm too lazy to learn linear algebra and impliment the kalman filer
+	Instead I stumbled across the complimentary filter which is what I'll be implimenting instead.
 -Impliment input from the RC reciever
+	-Get the input - Needs testing
+	-Apply it to the PID loops to get a proper output - needs testing
 -Add failsafe
 -Tune PID loops
 

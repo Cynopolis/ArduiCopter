@@ -13,23 +13,31 @@
  * Unless stated otherwise ALL data is stored in the order of x, y, z
  */
 float IMUData[3][3];
-//ESC output data
+//the filtered angles that combines the accel and gyro input (degrees)
+float filteredData[3] = {0, 0, 0};
+//Using servo objects to output data to ESCs
 Servo ESC[4];
 //pin numbers of the ESC pins in the order of FL, FR, BL, BR
 int ESCPin[4] = {2,6,7,8};
+/*The pins to be connected to the reciever
+ * pitch, roll, yaw, height, switch1, switch2
+ */
+int RXPin[6] = {A0, A1, A2, A3, A4, A5};
+float RXData[6] = {0,0,0,0,0,0};
 //compass heading
 float heading = 0;
 
-//the current angle the drone is at and the target angle (degrees)
-float angles[3];
-float targetAngles[3] = {90, 90, 0};
+//the tilt angles computed by the accelerometer data (degrees)
+float accelAngles[3];
+//the target angles the drone should be at (degrees)
+float targetAngles[3] = {90, 90, 0}; //90, 90, 0 is level flight
 
 //PID controllers, their k values, and their outputs
 float kVals[3][3] = {{1,1,1}, {1,1,1}, {1,1,1}};
 float PIDOutput[3] = {0, 0, 0};
-AutoPID pitch(&angles[0], &targetAngles[0], &PIDOutput[0], 0, 100, kVals[0][0], kVals[0][1], kVals[0][2]);
-AutoPID roll(&angles[1], &targetAngles[1], &PIDOutput[1], 0, 100, kVals[1][0], kVals[1][1], kVals[1][2]);
-AutoPID yaw(&IMUData[1][2], &targetAngles[2], &PIDOutput[2], 0, 100, kVals[2][0], kVals[2][1], kVals[2][2]);
+AutoPID pitch(&filteredData[0], &targetAngles[0], &PIDOutput[0], 0, 100, kVals[0][0], kVals[0][1], kVals[0][2]);
+AutoPID roll(&filteredData[1], &targetAngles[1], &PIDOutput[1], 0, 100, kVals[1][0], kVals[1][1], kVals[1][2]);
+AutoPID yaw(&filteredData[2], &targetAngles[2], &PIDOutput[2], 0, 100, kVals[2][0], kVals[2][1], kVals[2][2]);
 float height = 0;
 
 void setup() {
@@ -44,23 +52,18 @@ void setup() {
 }
 
 void loop() {
+  //get raw IMU data
   readIMU();
+  //calculate tilt angle
   calcLevelAngle();
+  //filter IMU data
+  filterData();
+  //get reciever input channels 1-4
+  getRXInput(4);
+  //update the PID loop with the new information
   updatePID();
-  //Serial.print("Test: ");
-  //Serial.print(IMUData[0][0]);
-  Serial.print("X: ");
-  Serial.print(PIDOutput[0]);
-  Serial.print(", ");
-  Serial.print(angles[0]);
-  Serial.print(", Y: ");
-  Serial.print(PIDOutput[1]);
-  Serial.print(", ");
-  Serial.print(angles[1]);
-  Serial.print(", Z: ");
-  Serial.print(PIDOutput[2]);
-  Serial.print(", ");
-  Serial.println(angles[2]);
+  //output new values to the ESC
+  updateESCs();
 }
 
 //read the data from the IMU
@@ -105,14 +108,15 @@ void readIMU(){
   }
 }
 
-//calculate the polar angles for the accelerometer in degrees
+//calculate the tilt angles in degrees from the accelerometer data
 void calcLevelAngle(){
   float magnitude = sqrt(sq(IMUData[0][0]) + sq(IMUData[0][1]) + sq(IMUData[0][2]));
   for(int i = 0; i < 3; i++){
-    angles[i] = round(180*acos(IMUData[0][i]/magnitude)/3.1415);
+    accelAngles[i] = round(180*acos(IMUData[0][i]/magnitude)/3.1415);
   }
 }
 
+//updates the PID loops with new information
 void updatePID(){
   pitch.run();
   roll.run();
@@ -135,4 +139,27 @@ void updateESCs(){
   ESC[1].write(180/(1 + pow(e, -0.05*(FL+100))) + 90);
   ESC[2].write(180/(1 + pow(e, -0.05*(FL-100))) + 90);
   ESC[3].write(180/(1 + pow(e, -0.05*(FL-100))) + 90);
+}
+
+//combines the IMU data to get more usable results
+void filterData(){
+  //combine accelX with gyroX
+  filteredData[0] = 0.98*IMUData[1][0] + 0.02*accelAngles[0];
+  //combine accelY with gyroY
+  filteredData[1] = 0.98*IMUData[1][1] + 0.02*accelAngles[1];
+  //combine heading with gyroZ
+  filteredData[2] = 0.98*IMUData[1][2] + 0.02*heading;
+}
+
+//read the data from the RC reciever.
+void getRXInput(int pinRange){
+  int maxAngle = 30; //degrees
+  for(int i = 0; i < pinRange; i++){
+    //Takes the input and converts to a range between -1 and 1.
+    RXData[i] = (pulseIn(RXPin[i], HIGH, 21495)-1565)/365;
+    if(i < 3){
+      targetAngles[i] = maxAngle*RXData[i];
+    }
+  }
+  height = (RXData[3]+1)*50;
 }
