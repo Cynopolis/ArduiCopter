@@ -12,6 +12,7 @@
  * Compass data is in IMUData[2] (raw compass data)
  * Unless stated otherwise ALL data is stored in the order of x, y, z
  */
+boolean failSafe = false;
 float IMUData[3][3];
 //the filtered angles that combines the accel and gyro input (degrees)
 float filteredData[3] = {0, 0, 0};
@@ -52,6 +53,7 @@ void setup() {
 }
 
 void loop() {
+  unsigned long timer = millis();
   //get raw IMU data
   readIMU();
   //calculate tilt angle
@@ -64,6 +66,7 @@ void loop() {
   updatePID();
   //output new values to the ESC
   updateESCs();
+  Serial.println(millis()-timer);
 }
 
 //read the data from the IMU
@@ -160,6 +163,9 @@ void getRXInput(int pinRange){
     if(i < 3){
       targetAngles[i] = maxAngle*RXData[i];
     }
+  }
+  if(RXData[0] == 0 && RXData[1] == 0 && RXData[2] == 0 && RXData[3] == 0){
+    failSafe = true;
   }
   height = (RXData[3]+1)*50;
 }

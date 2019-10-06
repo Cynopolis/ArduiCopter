@@ -8,6 +8,8 @@
 	-Get the input - Needs testing
 	-Apply it to the PID loops to get a proper output - needs testing
 -Add failsafe
+	-Detect when no input is detected -DONE!
+	=Do something about it
 -Tune PID loops
 
 At this point the Quad Copter should be flyable, and the rest is gravy
