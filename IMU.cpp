@@ -80,7 +80,7 @@ void detectIMU(){
   }
   
     
-  delay(1000);
+  //delay(1000);
   
   
   
@@ -104,7 +104,7 @@ if (LSM9DS0){//For BerryIMUv1
   writeTo(LSM9DS0_MAG_ADDRESS,LSM9DS0_CTRL_REG7_XM, 0b00000000);   // Continuous-conversion mode
 
   // Enable Gyro
-  writeTo(LSM9DS0_GYR_ADDRESS, LSM9DS0_CTRL_REG1_G, 0b00001111); // Normal power mode, all axes enabled
+  writeTo(LSM9DS0_GYR_ADDRESS, LSM9DS0_CTRL_REG1_G, 0b00000110); // Normal power mode, all axes enabled
   writeTo(LSM9DS0_GYR_ADDRESS, LSM9DS0_CTRL_REG4_G, 0b00110000); // Continuos update, 2000 dps full scale
 }
 else if(LSM9DS1){//For BerryIMUv2  
