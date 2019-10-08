@@ -30,12 +30,12 @@ boolean failSafe = false;
 float heading = 0;
 
 //the tilt angles computed by the accelerometer data (degrees)
-float accelAngles[3];
+float accAngle[3];
 //the target angles and the throttle the drone should be at (degrees) and throttle
 float targetPosition[4] = {0, 0, 0, 0}; //this is level flight with no throttle
 
 //PID controllers, their k values, and their outputs
-float kVals[3][3] = {{1,1.5,1}, {1,1,1}, {1,1,1}};
+float kVals[3][3] = {{10,1.5,1}, {1,1,1}, {1,1,1}};
 float PIDOutput[3] = {0, 0, 0};
 AutoPID pitch(&filteredData[0], &targetPosition[0], &PIDOutput[0], -100, 100, kVals[0][0], kVals[0][1], kVals[0][2]);
 AutoPID roll(&filteredData[1], &targetPosition[1], &PIDOutput[1], -100, 100, kVals[1][0], kVals[1][1], kVals[1][2]);
@@ -73,7 +73,7 @@ void loop() {
   Serial.print("Filtered Pitch: ");
   Serial.print(filteredData[0]);
   Serial.print(", Accel Pitch: ");
-  Serial.print(accelAngles[0]);
+  Serial.print(accAngle[0]);
   Serial.print(", Gyro Pitch: ");
   Serial.print(IMUData[1][0]);
   Serial.print(", PID Output: ");
@@ -111,7 +111,7 @@ void readIMU(){
     IMUData[2][i/2] = (int)(buff[i] | (buff[i+1] << 8));
   }
   //Compute heading  
-   heading = 180 * atan2(IMUData[2][1],IMUData[2][0])/M_PI;
+   heading = 180/M_PI* atan2(IMUData[2][1],IMUData[2][0]);
   
   //keep heading between 0 - 360
   while(heading < 0)
@@ -122,10 +122,9 @@ void readIMU(){
 
 //calculate the tilt angles in degrees from the accelerometer data
 void calcLevelAngle(){
-  float magnitude = sqrt(sq(IMUData[0][0]) + sq(IMUData[0][1]) + sq(IMUData[0][2]));
-  for(int i = 0; i < 3; i++){
-    accelAngles[i] = round(180*acos(IMUData[0][i]/magnitude)/3.1415) -IMUCalibration[0][i];
-  }
+  accAngle[0] = atan2(IMUData[0][1], IMUData[0][2])*180/M_PI; //pitch
+  accAngle[1] = atan2(-IMUData[0][0], sqrt(IMUData[0][1]*IMUData[0][1]+IMUData[0][2]*IMUData[0][2]))*180/M_PI; //roll
+  accAngle[2] = 0; //can't calculate yaw with accelerometer
 }
 
 //updates the PID loops with new information
@@ -159,9 +158,9 @@ void updateESCs(){
 //combines the IMU data to get more usable results
 void filterData(){
   //combine accelX with gyroX
-  filteredData[0] = 0.9*IMUData[1][0] + 0.1*accelAngles[0];
+  filteredData[0] = 0.9*IMUData[1][0] + 0.1*accAngle[0];
   //combine accelY with gyroY
-  filteredData[1] = 0.9*IMUData[1][1] + 0.1*accelAngles[1];
+  filteredData[1] = 0.9*IMUData[1][1] + 0.1*accAngle[1];
   //combine heading with gyroZ
   filteredData[2] = 0.9*IMUData[1][2] + 0.1*heading;
 }
@@ -203,6 +202,9 @@ void callibrateIMU(){
   IMUCalibration[1][0] = sums[0]/1000;
   IMUCalibration[1][1] = sums[1]/1000;
   IMUCalibration[1][2] = sums[2]/1000;
+  readIMU();
+  calcLevelAngle();
+  for(int i = 0; i < 3; i++){IMUData[1][i] = accAngle[i];}
   Serial.println(IMUCalibration[1][0]);
   Serial.println(IMUCalibration[1][1]);
   Serial.println(IMUCalibration[1][2]);
